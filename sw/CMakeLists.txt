@@ -26,10 +26,6 @@ if(COYOTE_VERBOSE_DEBUG_1)
   add_compile_definitions(VERBOSE_DEBUG_1)
 endif()
 
-if(COYOTE_ENABLE_1G_HUGE_PAGES)
-    set(TLBL_BITS 30 CACHE STRING "TLB (huge) page order")
-    add_compile_definitions(TLBL_BITS=${TLBL_BITS})
-endif()
 
 if(EN_GPU)
     if(NOT DEFINED ROCM_PATH)
