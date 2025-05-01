@@ -117,7 +117,8 @@ bThread::bThread(int32_t vfid, pid_t hpid, uint32_t dev, cSched *csched, void (*
 	DBG3("bThread:  opening vFPGA-" << vfid << ", hpid " << hpid);
 
     # ifdef VERBOSE
-        std::cout << "bThread: Called the constructor for vfid " << vfid << ", hpid " << hpid << ", dev " << dev << std::endl; 
+        std::cout << "bThread: Called the constructor for vfid " << vfid << ", hpid " << hpid << ", dev " << dev << std::endl;
+        std::cout << "bThread: Using " << TLBL_BITS << " bits for TLB page size" << std::endl;
     # endif
     
 	// Opens a device file path for READ and WRITE (with SYNC demands) and checks if that worked 
