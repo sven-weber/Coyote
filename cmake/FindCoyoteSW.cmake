@@ -1,3 +1,29 @@
+######################################################################################
+# This file is part of the Coyote <https://github.com/fpgasystems/Coyote>
+# 
+# MIT Licence
+# Copyright (c) 2025, Systems Group, ETH Zurich
+# All rights reserved.
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+######################################################################################
+
 ############################################
 #        COYOTE SOFTWARE PACKAGE           #
 ############################################
@@ -18,6 +44,13 @@ set(EN_GPU "0" CACHE STRING "AMD GPU enabled.")
 #       BUILD CONFIG        #
 #############################
 set(CYT_LANG CXX)
+
+set(EN_SIM 0 CACHE STRING "Build for simulation.")
+set(SIM_DIR "" CACHE STRING "Directory that contains simulation project.")
+string(COMPARE EQUAL "${SIM_DIR}" "" result)
+if(NOT result)
+    set(EN_SIM 1)
+endif()
 
 # Find GPU libraries
 if(EN_GPU)
@@ -96,6 +129,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -march=native -O3")
 
 # Source files, includes
 file(GLOB CYT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/../sw/src/*.cpp")
+if(EN_SIM)
+    list(FILTER CYT_SOURCES EXCLUDE REGEX ".*cThread\\.cpp$")
+    file(GLOB SIM_SOURCES "${CMAKE_CURRENT_LIST_DIR}/../sim/sw/src/*.cpp")
+    list(APPEND CYT_SOURCES ${SIM_SOURCES})
+endif()
 add_library(Coyote SHARED ${CYT_SOURCES})
 
 # Output directories
@@ -109,6 +147,9 @@ endif()
 
 # Header includes
 set(CYT_INCLUDE_PATH ${CMAKE_CURRENT_LIST_DIR}/../sw/include)
+if(EN_SIM)
+    list(APPEND CYT_INCLUDE_PATH ${CMAKE_CURRENT_LIST_DIR}/../sim/sw/include)
+endif()
 target_include_directories(Coyote PUBLIC ${CYT_INCLUDE_PATH})
 target_link_directories(Coyote PUBLIC /usr/local/lib)
 
@@ -135,6 +176,9 @@ if(EN_GPU)
     # Add GPU libraries
     target_link_libraries(Coyote PUBLIC hip::device numa pthread drm drm_amdgpu rt dl hsa-runtime64 hsakmt)
 
+endif()
+if (EN_SIM)
+    target_compile_definitions(Coyote PUBLIC SIM_DIR="${SIM_DIR}")
 endif()
 
 

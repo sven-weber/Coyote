@@ -1,29 +1,28 @@
 /**
-  * Copyright (c) 2021, Systems Group, ETH Zurich
-  * All rights reserved.
-  *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *
-  * 1. Redistributions of source code must retain the above copyright notice,
-  * this list of conditions and the following disclaimer.
-  * 2. Redistributions in binary form must reproduce the above copyright notice,
-  * this list of conditions and the following disclaimer in the documentation
-  * and/or other materials provided with the distribution.
-  * 3. Neither the name of the copyright holder nor the names of its contributors
-  * may be used to endorse or promote products derived from this software
-  * without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-  * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-  * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-  */
+ * This file is part of the Coyote <https://github.com/fpgasystems/Coyote>
+ *
+ * MIT Licence
+ * Copyright (c) 2021-2025, Systems Group, ETH Zurich
+ * All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 
 `timescale 1ns / 1ps
 
@@ -104,6 +103,8 @@ localparam integer RTRN_IDLE = 0;
 localparam integer RTRN_LOCKED = 1;
 localparam integer RTRN_MISS = 2;
 
+localparam integer ACK_BUFFER_SIZE = 2 + STRM_BITS + DEST_BITS + PID_BITS;
+
 // -- FSM ---------------------------------------------------------------------------------------------------
 typedef enum logic[4:0] {ST_IDLE, ST_LOCKED,
                          ST_MUTEX, ST_WAIT_1, ST_WAIT_2, ST_CHECK,
@@ -178,11 +179,11 @@ logic [(4+HPID_BITS+LEN_BITS+VADDR_BITS)/8-1:0] req_host_in_we;
 // ack buffs
 logic ack_buff_host_sink_valid;
 logic ack_buff_host_sink_ready;
-logic [2+STRM_BITS+DEST_BITS+PID_BITS-1:0] ack_buff_host_sink_data;
+logic [ACK_BUFFER_SIZE - 1:0] ack_buff_host_sink_data;
 
 logic ack_buff_host_src_valid;
 logic ack_buff_host_src_ready;
-logic [2+STRM_BITS+DEST_BITS+PID_BITS-1:0] ack_buff_host_src_data;
+logic [ACK_BUFFER_SIZE - 1:0] ack_buff_host_src_data;
 
 // I/O 
 logic hdma_valid;
@@ -209,11 +210,11 @@ logic [N_CARD_AXI-1:0][(4+HPID_BITS+LEN_BITS+VADDR_BITS)/8-1:0] req_card_in_we;
 // ack buffs can't use meta here (Xilinx will never fix the interfaces ...)
 logic [N_CARD_AXI-1:0] ack_buff_card_sink_valid;
 logic [N_CARD_AXI-1:0] ack_buff_card_sink_ready;
-logic [N_CARD_AXI-1:0][2+STRM_BITS+DEST_BITS+PID_BITS-1:0] ack_buff_card_sink_data;
+logic [N_CARD_AXI-1:0][ACK_BUFFER_SIZE - 1:0] ack_buff_card_sink_data;
 
 logic [N_CARD_AXI-1:0] ack_buff_card_src_valid;
 logic [N_CARD_AXI-1:0] ack_buff_card_src_ready;
-logic [N_CARD_AXI-1:0][2+STRM_BITS+DEST_BITS+PID_BITS-1:0] ack_buff_card_src_data;
+logic [N_CARD_AXI-1:0][ACK_BUFFER_SIZE - 1:0] ack_buff_card_src_data;
 
 // I/O 
 logic [N_CARD_AXI-1:0] ddma_valid;
@@ -601,6 +602,7 @@ always_comb begin: DP
 	vaddr_N = vaddr_C;
 	last_N = last_C;
 	strm_N = strm_C;
+    host_N = host_C;
 	dest_N = dest_C;
 	pid_N = pid_C;
 	val_N = 1'b0;
@@ -765,6 +767,7 @@ always_comb begin: DP
 					pid_N = cch_buff_src.data.pid;
 					dest_N = cch_buff_src.data.dest;
 					last_N = cch_buff_src.data.last;
+                    host_N = cch_buff_src.data.host;
             `ifdef EN_STRM
                 `ifdef EN_MEM
 					strm_N = cch_buff_src.data.strm;
@@ -792,6 +795,7 @@ always_comb begin: DP
 					pid_N = s_req.data.pid;
 					dest_N = s_req.data.dest;
 					last_N = s_req.data.last;
+                    host_N = s_req.data.host;
 			`ifdef EN_STRM
                 `ifdef EN_MEM
 					strm_N = s_req.data.strm;
@@ -1110,7 +1114,7 @@ assign m_host_done.data.pid = ack_buff_host_src_data[0+:PID_BITS];
 assign m_host_done.data.dest = ack_buff_host_src_data[PID_BITS+:DEST_BITS];
 assign m_host_done.data.strm = ack_buff_host_src_data[PID_BITS+DEST_BITS+:STRM_BITS];
 assign m_host_done.data.host = ack_buff_host_src_data[PID_BITS+DEST_BITS+STRM_BITS+:1];
-assign m_host_done.data.opcode = 0;
+assign m_host_done.data.opcode = RDWR ? LOCAL_WRITE : LOCAL_READ;
 assign m_host_done.data.remote = 1'b0;
 assign m_host_done.data.vfid = ID_REG;
 `endif
@@ -1150,7 +1154,7 @@ for(genvar i = 0; i < N_CARD_AXI; i++) begin
     assign card_done[i].data.dest = ack_buff_card_src_data[i][PID_BITS+:DEST_BITS];
     assign card_done[i].data.strm = ack_buff_card_src_data[i][PID_BITS+DEST_BITS+:STRM_BITS];
     assign card_done[i].data.host = ack_buff_card_src_data[i][PID_BITS+DEST_BITS+STRM_BITS+:1];
-    assign card_done[i].data.opcode = 0;
+    assign card_done[i].data.opcode = RDWR ? LOCAL_WRITE : LOCAL_READ;
     assign card_done[i].data.remote = 1'b0;
     assign card_done[i].data.vfid = ID_REG;
     assign card_done[i].data.rsrvd = 0;

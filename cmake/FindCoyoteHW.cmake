@@ -1,3 +1,29 @@
+######################################################################################
+# This file is part of the Coyote <https://github.com/fpgasystems/Coyote>
+# 
+# MIT Licence
+# Copyright (c) 2025, Systems Group, ETH Zurich
+# All rights reserved.
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+######################################################################################
+
 ############################################
 ##         COYOTE HARDWARE PACKAGE        ##
 ############################################
@@ -32,8 +58,10 @@ set(BUILD_SHELL 1 CACHE STRING "Build shell, linking against existing design che
 # Build the user logic (vFPGA) and link it against an existing shell 
 set(BUILD_APP 0 CACHE STRING "Build app portion of the design (on top of existing shell config)")
 
-# Custom simulation callback script, executed during simulation, executed at the end of scripts/cr_sim.tcl 
-set(SIM_SCR_PATH 0 CACHE STRING "Custom simulation script path")
+# Unit tests/Simulation
+set(UNIT_TEST_DIR "${CMAKE_SOURCE_DIR}/unit-tests" CACHE STRING "Path to the unit-test folder.")
+set(SIM_DPI_LIB_NAME "coyote_sim" CACHE STRING "Name of the DPI-C library to link for simulation WITHOUT the '.so' extension.")
+set(SIM_CLOCK_PERIOD "4ns" CACHE STRING "Clock period used in the simulation. Can have one of the following extensions: fs, ps, ns, us, ms, sec")
 
 ##
 ## MEMORY & STREAMS
@@ -65,6 +93,9 @@ set(DDR_FRAG 1024 CACHE STRING "Stripe fragment size")
 
 # Concatenate HBM bank ports to achieve higher throughput
 set(HBM_SPLIT 0 CACHE STRING "HBM bank splitting")
+
+set(DATA_DEST_BITS 4 CACHE STRING "Number of bits used to address the coyote stream index.")
+set(VADDR_BITS 48 CACHE STRING "Bits of a virtual address used e.g. in the MMU.")
 
 ##
 ## TLB
@@ -306,6 +337,7 @@ macro(validation_checks_hw)
             set(FPGA_PART xcu280-fsvh2892-2L-e CACHE STRING "FPGA device.")
             set(DDR_SIZE 34)
             set(HBM_SIZE 33)
+            set(N_DDR_CHAN 1)
         else()
             message(FATAL_ERROR "Target device not supported.")
         endif()
@@ -315,8 +347,8 @@ macro(validation_checks_hw)
         ## DDR and HBM support
         ## ! u280 has both DDR and HBM, HBM enabled by def, if DDR is required add u280 in DDR_DEV and remove it from HBM_DEV
         ##
-        set(DDR_DEV "vcu118" "u200" "u250" "enzian")
-        set(HBM_DEV "u280" "u50" "u55c")
+        set(DDR_DEV "u250")
+        set(HBM_DEV "u55c" "u280")
 
         list(FIND DDR_DEV ${FDEV_NAME} TMP_DEV)
         if(NOT TMP_DEV EQUAL -1)
@@ -689,6 +721,9 @@ macro(gen_scripts)
     # HLS scripts
     configure_file(${CYT_DIR}/scripts/hls/comp_hls.tcl.in ${CMAKE_BINARY_DIR}/comp_hls.tcl)
 
+    # Python sim (unit-testing framework)
+    configure_file(${CYT_DIR}/scripts/unit_test/__init__.in.py ${CMAKE_BINARY_DIR}/coyote_test/__init__.py)
+
     # Project creation scripts
     configure_file(${CYT_DIR}/scripts/cr_prjcts/cr_static.tcl.in ${CMAKE_BINARY_DIR}/cr_static.tcl)
     configure_file(${CYT_DIR}/scripts/cr_prjcts/cr_shell.tcl.in ${CMAKE_BINARY_DIR}/cr_shell.tcl)
@@ -796,6 +831,7 @@ macro(gen_targets)
     set(STATIC_PRJCT_CMD COMMAND ${VIVADO_BINARY} -mode tcl -source ${CMAKE_BINARY_DIR}/cr_static.tcl -notrace)
     set(SHELL_PRJCT_CMD COMMAND ${VIVADO_BINARY} -mode tcl -source ${CMAKE_BINARY_DIR}/cr_shell.tcl -notrace)
     set(APP_PRJCT_CMD COMMAND ${VIVADO_BINARY} -mode tcl -source ${CMAKE_BINARY_DIR}/cr_user.tcl -notrace)
+    set(SIM_PRJCT_CMD COMMAND ${VIVADO_BINARY} -mode tcl -source ${CMAKE_BINARY_DIR}/cr_sim.tcl -notrace)
 
     set(SYNTH_CMD_STATIC  COMMAND ${VIVADO_BINARY} -mode tcl -source ${CMAKE_BINARY_DIR}/synth_static.tcl -notrace)
     set(SYNTH_CMD_SHELL   COMMAND ${VIVADO_BINARY} -mode tcl -source ${CMAKE_BINARY_DIR}/synth_shell.tcl -notrace)
@@ -815,7 +851,13 @@ macro(gen_targets)
 
     # Sim
     # -----------------------------------
-    add_custom_target(sim COMMAND ${VIVADO_BINARY} -mode tcl -source ${CMAKE_BINARY_DIR}/cr_sim.tcl -notrace)
+    add_custom_target(sim
+        ${HLS_SYNTH_CMD}
+        ${SIM_PRJCT_CMD}
+    )
+    # Compile DPI-C library for test bench
+    add_subdirectory(${CYT_DIR}/sim/hw/dpi ${CMAKE_BINARY_DIR}/dpi)
+    add_dependencies(sim sim_dpi_c)
 
     # Project
     # -----------------------------------

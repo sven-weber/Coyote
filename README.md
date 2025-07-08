@@ -27,6 +27,7 @@ Some of Coyote's features include:
  * Networking services: 100G RoCE-v2 compatible RDMA, TCP/IP and collectives
  * Automatic instantiation of card memory controllers (HBM/DDR) and memory striping
  * Dynamic run-time reconfiguration of user applications and services
+ * Simulation environment with seamless simulation target for software code and Python unit test framework
 
 <p align="center"
  <picture>
@@ -49,7 +50,7 @@ Additional details on **Coyote's** features and internals can be found in the [d
 - **Linux**: For the basic Coyote functionality, Linux >= 5 is sufficient. Coyote has been extensively tested with Linux 5.4, Linux 5.15, Linux 6.2 and Linux 6.8.
 - **CMake**: CMake >= 3.5 with support for C++17.
 - **Vivado & Vitis**: Coyote has to be built with the full Vivado suite, including Vitis HLS. Coyote supports Vivado/Vitis HLS >= 2022.1. We have conducted extensive testing with Vivado 2022.1 and recommend this version for synthesizing Coyote (but others should work as well). All network-related Coyote configurations are built using the UltraScale+ Integrated 100G Ethernet Subsystem, for which a valid license must be obtained.
-- **FPGA**: The main target platform for the current Coyote release is the AMD Alveo U55C accelerator card. Some support and testing also exists for the older U250 and U280 platforms, which can be used in the current version of Coyote.
+- **FPGA**: The main target platform for the current Coyote release is the AMD Alveo U55C accelerator card, Additionally, Coyote also supports and has extensively been tested on Alveo U250 and Alveo U280.
 
 Additional requirements for certain features (e.g. GPU peer-to-peer) are covered in the respective example covering the feature.
 
@@ -85,23 +86,6 @@ If you use Coyote, please cite us:
 ```
 
 # License
-
-Copyright (c) 2023 FPGA @ Systems Group, ETH Zurich
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Most of Coyote code is licensed under the terms in [LICENSE](https://github.com/fpgasystems/Coyote/blob/master/LICENSE.md), which corresponds to the MIT Licence.
+An exception to this is the Coyote device driver, which is open-sourced with the GPL v2 license. 
+Any contributions to Coyote will be accepted under the same terms of license.

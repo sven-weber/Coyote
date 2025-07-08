@@ -1,3 +1,29 @@
+######################################################################################
+# This file is part of the Coyote <https://github.com/fpgasystems/Coyote>
+# 
+# MIT Licence
+# Copyright (c) 2025, Systems Group, ETH Zurich
+# All rights reserved.
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+######################################################################################
+
 # @brief Creates a Vivado project for each region and config
 # Additionally, it packages user kernels as IPs that can be used later during the synthesis
 
@@ -66,7 +92,6 @@ for {set i 0}  {$i < $cfg(n_config)} {incr i} {
         add_files "$hw_dir/hdl/user"
         add_files "$hw_dir/hdl/common"
         add_files "$proj_dir/hdl"
-        add_files "$proj_dir/hdl/wrappers"
 
         # Top level
         set_property "top" design_user_wrapper_$j [current_fileset]
@@ -98,17 +123,17 @@ for {set i 0}  {$i < $cfg(n_config)} {incr i} {
             eval $cmd
 
             # Add all raw HDL files (no packaging)
-            file mkdir "$build_dir/$project\_config_$i/user\_c$i\_$j/hdl/ext/raw"
+            file mkdir "$proj_dir/hdl/ext/raw"
             set files_hdl [glob -nocomplain "$hw_dir/hdl/pkg/axi_macros.svh" "$hw_dir/hdl/pkg/axi_intf.sv" "$hw_dir/hdl/pkg/lynx_macros.svh" "$hw_dir/hdl/pkg/lynx_intf.sv"]
-            file copy -force {*}$files_hdl "$build_dir/$project\_config_$i/user\_c$i\_$j/hdl/ext/raw"
+            file copy -force {*}$files_hdl "$proj_dir/hdl/ext/raw"
 
             if {[file isdirectory "${CMAKE_SOURCE_DIR}/$tmp_path/hdl"]} {
-                set files_hdl [glob -nocomplain "${CMAKE_SOURCE_DIR}/$tmp_path/hdl/*.svh" "${CMAKE_SOURCE_DIR}/$tmp_path/hdl/*.sv" "${CMAKE_SOURCE_DIR}/$tmp_path/hdl/*.v" "${CMAKE_SOURCE_DIR}/$tmp_path/hdl/*.vhd"]
+                set files_hdl [glob -nocomplain "${CMAKE_SOURCE_DIR}/$tmp_path/hdl/*"]
                 if {[llength $files_hdl]} {
-                    file copy -force {*}$files_hdl "$build_dir/$project\_config_$i/user\_c$i\_$j/hdl/ext/raw"
+                    file copy -force {*}$files_hdl "$proj_dir/hdl/ext/raw"
                 }
             }
-            add_files -norecurse "$build_dir/$project\_config_$i/user\_c$i\_$j/hdl/ext/raw"
+            add_files "$proj_dir/hdl/ext/raw"
 
             # Add all HLS IPs (compiled using hls/comp_hls.tcl)
             if {[file isdirectory "${CMAKE_SOURCE_DIR}/$tmp_path/hls"]} {
@@ -122,9 +147,9 @@ for {set i 0}  {$i < $cfg(n_config)} {incr i} {
             # Include vFPGA top
             set files_hdl [glob -nocomplain "${CMAKE_SOURCE_DIR}/$tmp_path/vfpga_top.svh"]
             if {[llength $files_hdl]} {
-                file copy -force {*}$files_hdl "$build_dir/$project\_config_$i/user\_c$i\_$j/hdl/vfpga_top.svh"
+                file copy -force {*}$files_hdl "$proj_dir/hdl/vfpga_top.svh"
             }
-            add_files -norecurse "$build_dir/$project\_config_$i/user\_c$i\_$j/hdl/vfpga_top.svh"
+            add_files -norecurse "$proj_dir/hdl/vfpga_top.svh"
 
             # IP instantiation
             if {[file exists "${CMAKE_SOURCE_DIR}/$tmp_path/init_ip.tcl"]} {

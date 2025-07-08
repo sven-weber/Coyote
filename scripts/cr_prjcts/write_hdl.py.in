@@ -1,3 +1,29 @@
+######################################################################################
+# This file is part of the Coyote <https://github.com/fpgasystems/Coyote>
+# 
+# MIT Licence
+# Copyright (c) 2025, Systems Group, ETH Zurich
+# All rights reserved.
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+######################################################################################
+
 # @brief Utility scripts that generate Coyote HDL files given the user-provided CMake configuration
 # Since Coyote is highly configurable, some of the files (e.g., shell_top) need to be generated on the fly.
 # Hence, the write_hdl.py script, which generates the HDL files from hw/templates and the user config.
@@ -10,7 +36,6 @@ from jinja2 import Environment, FileSystemLoader
 
 # Config (see base.tcl)
 cfg = {}
-n_str = 10 # Number of config parameters that are string; rest are ints
 
 with open('base.tcl') as f:
     lines = f.readlines()
@@ -22,9 +47,10 @@ with open('base.tcl') as f:
             line.strip()
             words = line.split()
             cvar = line[line.find("(")+1:line.find(")")]
-            cfg[str(cvar)] = words[-1]
-            if i > n_str :
-                cfg[str(cvar)] = int(cfg[str(cvar)])
+            cfg_val = words[-1]
+            if cfg_val.isdigit():
+                cfg_val = int(cfg_val)
+            cfg[str(cvar)] = cfg_val
             i = i + 1
 
 # Args
@@ -46,7 +72,6 @@ if arg1 == 3 :
 
 template_dir = root_dir + '/hw/templates'
 output_dir = proj_dir + '/hdl'
-sim_dir = build_dir + '/sim/hdl'
 static_dir = output_dir + '/static'
 shell_dir = output_dir
 
@@ -142,4 +167,6 @@ if arg1 == 3 :
     # Sim
     #
 
+    sim_dir = build_dir + '/sim'
     renderhdl('lynx_pkg', sim_dir, 0)
+    renderuser('user_logic', sim_dir, arg2, arg3)
